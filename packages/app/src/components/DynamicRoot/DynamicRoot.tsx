@@ -37,6 +37,8 @@ import DynamicRootContext, {
   TechdocsAddon,
 } from './DynamicRootContext';
 import Loader from './Loader';
+import { userSettingsTranslations } from '../../app-translations/userSetting';
+
 
 export type StaticPlugins = Record<
   string,
@@ -458,6 +460,10 @@ export const DynamicRoot = ({
         api => !remoteApis.some(remoteApi => remoteApi.api.id === api.api.id),
       );
       app.current = createApp({
+        __experimentalTranslations: {
+          availableLanguages: ['en', 'zh'],
+         resources: [userSettingsTranslations],
+          },
         apis: [...filteredStaticApis, ...remoteApis],
         bindRoutes({ bind }) {
           bindAppRoutes(bind, resolvedRouteBindingTargets, routeBindings);
