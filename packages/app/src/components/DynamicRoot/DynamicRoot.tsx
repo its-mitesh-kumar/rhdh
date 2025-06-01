@@ -13,6 +13,8 @@ import { useThemes } from '@red-hat-developer-hub/backstage-plugin-theme';
 import { AppsConfig } from '@scalprum/core';
 import { useScalprum } from '@scalprum/react-core';
 
+import { catalogImportTranslations } from '../../translations/catalog-import/catalog-import';
+import { scaffolderTranslations } from '../../translations/scaffolder/scaffolder';
 import bindAppRoutes from '../../utils/dynamicUI/bindAppRoutes';
 import extractDynamicConfig, {
   configIfToCallable,
@@ -461,7 +463,11 @@ export const DynamicRoot = ({
       app.current = createApp({
         __experimentalTranslations: {
           availableLanguages: ['en'],
-          resources: [catalogTranslations],
+          resources: [
+            catalogTranslations,
+            scaffolderTranslations,
+            catalogImportTranslations,
+          ],
         },
         apis: [...filteredStaticApis, ...remoteApis],
         bindRoutes({ bind }) {
