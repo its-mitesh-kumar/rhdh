@@ -2,14 +2,33 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 
 import { createApp } from '@backstage/app-defaults';
-import { BackstageApp } from '@backstage/core-app-api';
+import { BackstageApp, MultipleAnalyticsApi } from '@backstage/core-app-api';
 import {
+  AnalyticsApi,
+  analyticsApiRef,
   AnyApiFactory,
   AppComponents,
+  AppTheme,
   BackstagePlugin,
+  ConfigApi,
+  configApiRef,
+  createApiFactory,
+  IdentityApi,
+  identityApiRef,
 } from '@backstage/core-plugin-api';
 
 import { useThemes } from '@red-hat-developer-hub/backstage-plugin-theme';
+import DynamicRootContext, {
+  ComponentRegistry,
+  DynamicRootConfig,
+  EntityTabOverrides,
+  MountPointConfig,
+  MountPoints,
+  ResolvedDynamicRoute,
+  ResolvedDynamicRouteMenuItem,
+  ScaffolderFieldExtension,
+  TechdocsAddon,
+} from '@red-hat-developer-hub/plugin-utils';
 import { AppsConfig } from '@scalprum/core';
 import { useScalprum } from '@scalprum/react-core';
 
@@ -26,20 +45,35 @@ import { catalogTranslations } from '../catalog/translations/catalog';
 import { MenuIcon } from '../Root/MenuIcon';
 import CommonIcons from './CommonIcons';
 import defaultAppComponents from './defaultAppComponents';
-import DynamicRootContext, {
-  AppThemeProvider,
-  ComponentRegistry,
-  DynamicRootConfig,
-  EntityTabOverrides,
-  MountPoints,
-  RemotePlugins,
-  ResolvedDynamicRoute,
-  ResolvedDynamicRouteMenuItem,
-  ScaffolderFieldExtension,
-  ScalprumMountPointConfig,
-  TechdocsAddon,
-} from './DynamicRootContext';
 import Loader from './Loader';
+
+export type RemotePlugins = {
+  [scope: string]: {
+    [module: string]: {
+      [importName: string]:
+        | React.ComponentType<React.PropsWithChildren>
+        | ((...args: any[]) => any)
+        | BackstagePlugin<{}>
+        | {
+            element: React.ComponentType<React.PropsWithChildren>;
+            staticJSXContent:
+              | React.ReactNode
+              | ((config: DynamicRootConfig) => React.ReactNode);
+          }
+        | AnyApiFactory
+        | AnalyticsApiClass;
+    };
+  };
+};
+
+type AnalyticsApiClass = {
+  fromConfig(
+    config: ConfigApi,
+    deps: { identityApi: IdentityApi },
+  ): AnalyticsApi;
+};
+
+type AppThemeProvider = Partial<AppTheme> & Omit<AppTheme, 'theme'>;
 
 export type StaticPlugins = Record<
   string,
@@ -82,6 +116,7 @@ export const DynamicRoot = ({
     const {
       pluginModules,
       apiFactories,
+      analyticsApiExtensions,
       appIcons,
       dynamicRoutes,
       menuItems,
@@ -117,6 +152,10 @@ export const DynamicRoot = ({
         module,
       })),
       ...apiFactories.map(({ scope, module }) => ({
+        scope,
+        module,
+      })),
+      ...analyticsApiExtensions.map(({ scope, module }) => ({
         scope,
         module,
       })),
@@ -228,11 +267,46 @@ export const DynamicRoot = ({
       [],
     );
 
+    const dynamicPluginsAnalyticsApis = analyticsApiExtensions.reduce<
+      AnalyticsApiClass[]
+    >((acc, { scope, module, importName }) => {
+      const analyticsApi = allPlugins[scope]?.[module]?.[importName];
+
+      if (analyticsApi) {
+        acc.push(analyticsApi as AnalyticsApiClass);
+      } else {
+        // eslint-disable-next-line no-console
+        console.warn(
+          `Plugin ${scope} is not configured properly: ${module}.${importName} not found, ignoring analyticsApi: ${importName}`,
+        );
+      }
+      return acc;
+    }, []);
+
+    const multipleAnalyticsApi =
+      dynamicPluginsAnalyticsApis.length > 0
+        ? [
+            createApiFactory({
+              api: analyticsApiRef,
+              deps: {
+                configApi: configApiRef,
+                identityApi: identityApiRef,
+              },
+              factory: ({ configApi, identityApi }) =>
+                MultipleAnalyticsApi.fromApis(
+                  dynamicPluginsAnalyticsApis.map(analyticsApi =>
+                    analyticsApi.fromConfig(configApi, { identityApi }),
+                  ),
+                ),
+            }),
+          ]
+        : [];
+
     const providerMountPoints = mountPoints.reduce<
       {
         mountPoint: string;
         Component: React.ComponentType<{}>;
-        config?: ScalprumMountPointConfig;
+        config?: MountPointConfig;
         staticJSXContent?:
           | React.ReactNode
           | ((dynamicRootConfig: DynamicRootConfig) => React.ReactNode);
@@ -469,7 +543,7 @@ export const DynamicRoot = ({
             catalogImportTranslations,
           ],
         },
-        apis: [...filteredStaticApis, ...remoteApis],
+        apis: [...filteredStaticApis, ...remoteApis, ...multipleAnalyticsApi],
         bindRoutes({ bind }) {
           bindAppRoutes(bind, resolvedRouteBindingTargets, routeBindings);
         },

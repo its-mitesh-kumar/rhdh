@@ -1,5 +1,3 @@
-# syntax=docker/dockerfile:1.16-labs
-
 # THIS IS USED BY Konflux builds == 1.4 - 1.5; see ../.rhdh/docker/Dockerfile for >=1.6
 #
 # Copyright (c) 2023-2024 Red Hat, Inc.
@@ -17,7 +15,7 @@
 
 # Stage 1 - Build nodejs skeleton
 # https://registry.access.redhat.com/ubi9/nodejs-22
-FROM registry.access.redhat.com/ubi9/nodejs-22:9.6-1748380538 AS skeleton
+FROM registry.access.redhat.com/ubi9/nodejs-22:9.6-1749632078 AS skeleton
 # hadolint ignore=DL3002
 USER 0
 
@@ -50,6 +48,7 @@ COPY $EXTERNAL_SOURCE_NESTED/plugins/scalprum-backend/package.json ./plugins/sca
 COPY $EXTERNAL_SOURCE_NESTED/plugins/licensed-users-info-backend/package.json ./plugins/licensed-users-info-backend/package.json
 COPY $EXTERNAL_SOURCE_NESTED/plugins/dynamic-plugins-info/package.json ./plugins/dynamic-plugins-info/package.json
 COPY $EXTERNAL_SOURCE_NESTED/plugins/dynamic-plugins-info-backend/package.json ./plugins/dynamic-plugins-info-backend/package.json
+COPY $EXTERNAL_SOURCE_NESTED/packages/plugin-utils/package.json ./packages/plugin-utils/package.json
 COPY $EXTERNAL_SOURCE_NESTED/packages/backend/package.json ./packages/backend/package.json
 COPY $EXTERNAL_SOURCE_NESTED/packages/app/package.json ./packages/app/package.json
 COPY $EXTERNAL_SOURCE_NESTED/package.json ./package.json
@@ -180,7 +179,7 @@ RUN \
 
 # Stage 5 - Build the runner image
 # https://registry.access.redhat.com/ubi9/nodejs-22-minimal
-FROM registry.access.redhat.com/ubi9/nodejs-22-minimal:9.6-1747315151 AS runner
+FROM registry.access.redhat.com/ubi9/nodejs-22-minimal:9.6-1749542063 AS runner
 USER 0
 
 ENV EXTERNAL_SOURCE_NESTED=.
