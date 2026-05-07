@@ -69,6 +69,13 @@ test.describe("Test Quick Start plugin", () => {
       process.env.GH_USER2_PASS,
     );
     await page.waitForTimeout(1000);
+    const ghLogin = await common.githubLoginFromSettingsPage(
+      process.env.GH_USER2_ID,
+      process.env.GH_USER2_PASS,
+      process.env.GH_USER2_2FA_SECRET,
+    );
+    expect(ghLogin).toBe("Login successful");
+
     await uiHelper.verifyText("Let's get you started with Developer Hub");
     await uiHelper.verifyText("We'll guide you through a few quick steps");
     await uiHelper.clickButtonByText("Import application");
